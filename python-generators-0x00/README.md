@@ -18,6 +18,15 @@ Create a Python script to set up a MySQL database and insert data using a CSV fi
 
 This task implements a generator `stream_users()` in the file `0-stream_users.py` that connects to a MySQL database `ALX_prodev`, fetches users from the `user_data` table and yields each row one by one as a dictionary.
 
+## Task 2 - Batch processing large data
+
+This task uses a generator to fetch user data from a SQL database in batches using `fetchmany`.
+
+### Files:
+- `1-batch_processing.py`: Contains:
+  - `stream_users_in_batches(batch_size)` – yields batches from the database.
+  - `batch_processing(batch_size)` – filters users older than 25 and prints them.
+
 ## Requirements
 - Python 3.x
 - mysql-connector-python
