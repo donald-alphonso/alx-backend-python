@@ -8,7 +8,6 @@ class ExecuteQuery:
     This is like having a personal assistant who not only opens doors,
     but also knows exactly what question to ask and gets the answer for you!
     
-    mais sait aussi exactement quelle question poser et obtient la réponse pour toi !
     """
     
     def __init__(self, query, parameters=None, db_name='users.db'):
