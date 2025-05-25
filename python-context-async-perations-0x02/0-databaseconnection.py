@@ -54,3 +54,36 @@ class DatabaseConnection:
             print(f"[{timestamp}] No database connection to close")
         
         return False
+
+    def main():
+        """
+        Main function to demonstrate the context manager
+        """
+        
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"\n[{timestamp}] Demonstrating DatabaseConnection context manager...")
+        
+        # Use the context manager with the 'with' statement
+        # Use our smart doorkeeper to safely visit the database
+        try:
+            with DatabaseConnection('users.db') as conn:
+                print(f"[{timestamp}] Inside the context - connection is active")
+                
+                # Perform the query
+                # Ask the database our question
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users")
+                results = cursor.fetchall()
+                
+                print(f"[{timestamp}] Query executed successfully!")
+                print(f"[{timestamp}] Found {len(results)} users:")
+                
+                # Print the results
+                # Show what the database told us
+                for user in results:
+                    print(f"  User ID: {user[0]}, Name: {user[1]}, Age: {user[2]}, Email: {user[3]}")
+                    
+            print(f"[{timestamp}] Exited the context - connection automatically closed")
+            
+        except Exception as e:
+            print(f"[{timestamp}] An error occurred: {e}")
