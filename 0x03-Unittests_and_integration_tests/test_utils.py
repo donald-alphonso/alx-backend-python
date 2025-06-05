@@ -9,7 +9,7 @@ class TestAccessNestedMap(unittest.TestCase):
     """Test case for access_nested_map"""
 
     @parameterized.expand([
-        ({"a", 1},("a",), 1),
+        ({"a": 1},("a",), 1),
         ({"a": {"b": 2}}, ("a",), {"b": 2}),
         ({"a": {"b": 2}}, ("a", "b"), 2),
     ])
