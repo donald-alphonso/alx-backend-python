@@ -6,11 +6,12 @@ from unittest.mock import patch, Mock
 from parameterized import parameterized
 from utils import access_nested_map, get_json, memoize
 
+
 class TestAccessNestedMap(unittest.TestCase):
     """Test case for access_nested_map"""
 
     @parameterized.expand([
-        ({"a": 1},("a",), 1),
+        ({"a": 1}, ("a",), 1),
         ({"a": {"b": 2}}, ("a",), {"b": 2}),
         ({"a": {"b": 2}}, ("a", "b"), 2),
     ])
@@ -80,8 +81,7 @@ class TestMemoize(unittest.TestCase):
 
             # Test that a_method was called only once
             mock_method.assert_called_once()
-            
-        
+                
 if __name__ == '__main__':
     unittest.main()
     
