@@ -23,11 +23,13 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Email already exists")
         return value
     
-    def validate_password(self, value):
+    def validate(self, value):
         """Method to validate password"""
         if 'password' in value and 'confirm_password' in value:
             if value['password'] != value['confirm_password']:
                 raise serializers.ValidationError("Passwords do not match")
+        
+        data.pop('confirm_password', None)
         return value
 
 class MessageSerializer(serializers.ModelSerializer):
