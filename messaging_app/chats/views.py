@@ -1,9 +1,10 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .models import User, Conversation, Message
 from .serializers import (
@@ -23,6 +24,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'conversation_id'
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['created_at']
+    search_fields = ['participants__username']
     
     def get_queryset(self):
         """
@@ -130,6 +134,9 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'message_id'
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['sent_at', 'conversation']
+    search_fields = ['message_body', 'sender__username']
     
     def get_queryset(self):
         """
