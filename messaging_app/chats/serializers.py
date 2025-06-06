@@ -110,65 +110,65 @@ class ConversationSerializer(serializers.ModelSerializer):
         return data
 
 class ConversationCreateSerializer(serializers.Serializer):
-    """Serializer spécial pour créer des conversations"""
+    """Special serializer for creating conversations"""
     participant_ids = serializers.ListField(
         child=serializers.UUIDField(),
         min_length=2,
-        help_text="Liste des UUIDs des participants (minimum 2)"
+        help_text="List of participant UUIDs (minimum 2)"
     )
     
     def validate_participant_ids(self, value):
-        """Validation des IDs des participants"""
+        """Participant ID validation"""
         if len(value) != len(set(value)):
-            raise serializers.ValidationError("Impossible d'ajouter le même participant plusieurs fois!")
+            raise serializers.ValidationError("Participants must be unique!")
         
         # Vérifier que tous les utilisateurs existent
         existing_users = User.objects.filter(user_id__in=value)
         if existing_users.count() != len(value):
             existing_ids = set(str(user.user_id) for user in existing_users)
             missing_ids = set(str(uid) for uid in value) - existing_ids
-            raise serializers.ValidationError(f"Utilisateurs introuvables: {missing_ids}")
+            raise serializers.ValidationError(f"Users with IDs {missing_ids} do not exist")
         
         return value
 
 class MessageCreateSerializer(serializers.Serializer):
-    """Serializer spécial pour créer des messages"""
-    conversation_id = serializers.UUIDField(help_text="UUID de la conversation")
-    sender_id = serializers.UUIDField(help_text="UUID de l'expéditeur")
-    message_body = serializers.CharField(max_length=1000, help_text="Contenu du message")
+    """Serializer for creating messages"""
+    conversation_id = serializers.UUIDField(help_text="UUID for the conversation")
+    sender_id = serializers.UUIDField(help_text="UUID for the sender")
+    message_body = serializers.CharField(max_length=1000, help_text="Message body")
     
     def validate_message_body(self, value):
-        """Validation du message"""
+        """check if the message body is valid"""
         if not value or not value.strip():
-            raise serializers.ValidationError("Le message ne peut pas être vide!")
+            raise serializers.ValidationError("Message empty!")
         
         if len(value) > 1000:
-            raise serializers.ValidationError("Message trop long! Maximum 1000 caractères!")
+            raise serializers.ValidationError("Message too long!")
         
         return value.strip()
     
     def validate_conversation_id(self, value):
-        """Vérifier que la conversation existe"""
+        """Check if the conversation exists"""
         if not Conversation.objects.filter(conversation_id=value).exists():
-            raise serializers.ValidationError("Conversation introuvable!")
+            raise serializers.ValidationError("Conversation not found!")
         return value
     
     def validate_sender_id(self, value):
-        """Vérifier que l'expéditeur existe"""
+        """Check if the sender exists"""
         if not User.objects.filter(user_id=value).exists():
-            raise serializers.ValidationError("Utilisateur expéditeur introuvable!")
+            raise serializers.ValidationError("Sender not found!")
         return value
     
     def validate(self, data):
-        """Validation croisée - vérifier que l'expéditeur fait partie de la conversation"""
+        """Validate the sender and conversation"""
         try:
             conversation = Conversation.objects.get(conversation_id=data['conversation_id'])
             sender = User.objects.get(user_id=data['sender_id'])
             
             if sender not in conversation.participants.all():
-                raise serializers.ValidationError("L'expéditeur ne fait pas partie de cette conversation!")
+                raise serializers.ValidationError("Sender not in conversation!")
             
         except (Conversation.DoesNotExist, User.DoesNotExist):
-            raise serializers.ValidationError("Conversation ou utilisateur introuvable!")
+            raise serializers.ValidationError("Conversation or User not found!")
         
         return data
