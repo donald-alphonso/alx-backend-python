@@ -5,6 +5,7 @@ import uuid
 class User(AbstractUser):
     """Extended user model - Our soldiers in the field"""
     user_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    password = models.CharField(max_length=128)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     email = models.EmailField(unique=True)
