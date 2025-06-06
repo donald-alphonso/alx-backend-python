@@ -4,7 +4,7 @@ import uuid
 
 class User(AbstractUser):
     """Extended user model - Our soldiers in the field"""
-    user_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    user_id = models.UUIDField(primary_key=True,default=uuid.uuid4, unique=True, editable=False)
     password = models.CharField(max_length=128)
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
@@ -22,7 +22,7 @@ class User(AbstractUser):
 
 class Conversation(models.Model):
     """Conversation - Canal de communication entre soldats"""
-    conversation_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
     participants = models.ManyToManyField(User, related_name='conversations')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -31,7 +31,7 @@ class Conversation(models.Model):
 
 class Message(models.Model):
     """Message - Les communications sur le terrain"""
-    message_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    message_id = models.UUIDField(primary_key=True, default=uuid.uuid4, unique=True, editable=False)
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     message_body = models.TextField()
