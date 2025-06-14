@@ -1,0 +1,608 @@
+{
+	"info": {
+		"_postman_id": "messaging-app-collection",
+		"name": "Messaging App API Collection",
+		"description": "Collection complète pour tester l'API de messagerie Django REST Framework",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000/api",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "conversation_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "message_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "1. Register User (Admin endpoint)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser1\",\n  \"email\": \"test1@example.com\",\n  \"password\": \"testpass123\",\n  \"first_name\": \"Test\",\n  \"last_name\": \"User1\",\n  \"phone_number\": \"+1234567890\",\n  \"role\": \"guest\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register", ""]
+						},
+						"description": "Créer un nouvel utilisateur (nécessite des droits admin ou endpoint public)"
+					}
+				},
+				{
+					"name": "2. Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('jwt_token', response.access);",
+									"    pm.collectionVariables.set('user_id', response.user.user_id);",
+									"    console.log('Token JWT sauvegardé:', response.access);",
+									"    console.log('User ID sauvegardé:', response.user.user_id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test1@example.com\",\n  \"password\": \"testpass123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login", ""]
+						},
+						"description": "Se connecter et obtenir un token JWT"
+					}
+				},
+				{
+					"name": "3. Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/token/refresh/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "token", "refresh", ""]
+						},
+						"description": "Renouveler le token d'accès"
+					}
+				},
+				{
+					"name": "4. Verify Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{jwt_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/token/verify/",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "token", "verify", ""]
+						},
+						"description": "Vérifier la validité du token"
+					}
+				}
+			],
+			"description": "Endpoints d'authentification JWT"
+		},
+		{
+			"name": "💬 Conversations",
+			"item": [
+				{
+					"name": "1. Create Conversation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('conversation_id', response.conversation_id);",
+									"    console.log('Conversation ID sauvegardé:', response.conversation_id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"participant_ids\": [\"{{user_id}}\"]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/conversations/",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", ""]
+						},
+						"description": "Créer une nouvelle conversation"
+					}
+				},
+				{
+					"name": "2. List My Conversations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversations/",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", ""]
+						},
+						"description": "Lister toutes mes conversations"
+					}
+				},
+				{
+					"name": "3. Get Conversation Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversations/{{conversation_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", "{{conversation_id}}", ""]
+						},
+						"description": "Obtenir les détails d'une conversation spécifique"
+					}
+				},
+				{
+					"name": "4. Get Messages from Conversation",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversations/{{conversation_id}}/messages/",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", "{{conversation_id}}", "messages", ""]
+						},
+						"description": "Récupérer tous les messages d'une conversation"
+					}
+				},
+				{
+					"name": "5. Add Participant to Conversation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"USER_ID_TO_ADD\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/conversations/{{conversation_id}}/add_participant/",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", "{{conversation_id}}", "add_participant", ""]
+						},
+						"description": "Ajouter un participant à une conversation"
+					}
+				},
+				{
+					"name": "6. Remove Participant from Conversation",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"USER_ID_TO_REMOVE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/conversations/{{conversation_id}}/remove_participant/",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", "{{conversation_id}}", "remove_participant", ""]
+						},
+						"description": "Supprimer un participant d'une conversation"
+					}
+				},
+				{
+					"name": "7. Filter Conversations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversations/?participants_count_gte=1&has_recent_messages=true",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", ""],
+							"query": [
+								{
+									"key": "participants_count_gte",
+									"value": "1"
+								},
+								{
+									"key": "has_recent_messages",
+									"value": "true"
+								}
+							]
+						},
+						"description": "Filtrer les conversations avec des paramètres"
+					}
+				}
+			],
+			"description": "Gestion des conversations"
+		},
+		{
+			"name": "💌 Messages",
+			"item": [
+				{
+					"name": "1. Send Message",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('message_id', response.message_id);",
+									"    console.log('Message ID sauvegardé:', response.message_id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"conversation_id\": \"{{conversation_id}}\",\n  \"message_body\": \"Bonjour ! Ceci est un message de test depuis Postman.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/messages/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", ""]
+						},
+						"description": "Envoyer un nouveau message dans une conversation"
+					}
+				},
+				{
+					"name": "2. List All My Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/messages/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", ""]
+						},
+						"description": "Lister tous mes messages"
+					}
+				},
+				{
+					"name": "3. Get Message Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/messages/{{message_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", "{{message_id}}", ""]
+						},
+						"description": "Obtenir les détails d'un message spécifique"
+					}
+				},
+				{
+					"name": "4. Update Message",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message_body\": \"Message modifié depuis Postman\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/messages/{{message_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", "{{message_id}}", ""]
+						},
+						"description": "Modifier un message (seul l'expéditeur peut le faire)"
+					}
+				},
+				{
+					"name": "5. Delete Message",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/messages/{{message_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", "{{message_id}}", ""]
+						},
+						"description": "Supprimer un message (seul l'expéditeur peut le faire)"
+					}
+				},
+				{
+					"name": "6. Get Recent Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/messages/recent/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", "recent", ""]
+						},
+						"description": "Récupérer les messages des dernières 24 heures"
+					}
+				},
+				{
+					"name": "7. Mark Message as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/messages/{{message_id}}/mark_as_read/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", "{{message_id}}", "mark_as_read", ""]
+						},
+						"description": "Marquer un message comme lu"
+					}
+				},
+				{
+					"name": "8. Filter Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/messages/?conversation={{conversation_id}}&message_body=test&ordering=-sent_at",
+							"host": ["{{base_url}}"],
+							"path": ["messages", ""],
+							"query": [
+								{
+									"key": "conversation",
+									"value": "{{conversation_id}}"
+								},
+								{
+									"key": "message_body",
+									"value": "test"
+								},
+								{
+									"key": "ordering",
+									"value": "-sent_at"
+								}
+							]
+						},
+						"description": "Filtrer les messages avec des paramètres"
+					}
+				}
+			],
+			"description": "Gestion des messages"
+		},
+		{
+			"name": "🚫 Security Tests",
+			"item": [
+				{
+					"name": "1. Access Conversation Without Token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/conversations/",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", ""]
+						},
+						"description": "Test d'accès sans authentification (doit retourner 401)"
+					}
+				},
+				{
+					"name": "2. Access Another User's Conversation",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/conversations/FAKE_CONVERSATION_ID/",
+							"host": ["{{base_url}}"],
+							"path": ["conversations", "FAKE_CONVERSATION_ID", ""]
+						},
+						"description": "Test d'accès à une conversation non autorisée (doit retourner 403 ou 404)"
+					}
+				},
+				{
+					"name": "3. Send Message Without Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"conversation_id\": \"{{conversation_id}}\",\n  \"message_body\": \"Message non autorisé\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/messages/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", ""]
+						},
+						"description": "Test d'envoi de message sans authentification (doit retourner 401)"
+					}
+				},
+				{
+					"name": "4. Delete Another User's Message",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/messages/FAKE_MESSAGE_ID/",
+							"host": ["{{base_url}}"],
+							"path": ["messages", "FAKE_MESSAGE_ID", ""]
+						},
+						"description": "Test de suppression du message d'un autre utilisateur (doit retourner 403 ou 404)"
+					}
+				}
+			],
+			"description": "Tests de sécurité et d'autorisation"
+		}
+	]
+}
