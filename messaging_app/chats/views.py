@@ -13,6 +13,7 @@ from .serializers import (
     ConversationCreateSerializer,
     MessageCreateSerializer
 )
+from .permissions import IsParticipantOfConversation, IsMessageSender
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -22,7 +23,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     """
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     lookup_field = 'conversation_id'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['created_at']
@@ -77,13 +78,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         """
         conversation = self.get_object()
         
-        # Check if current user is participant in this conversation
-        if request.user not in conversation.participants.all():
-            return Response(
-                {'error': 'You are not authorized to view this conversation'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
+        # Permission check is handled by IsParticipantOfConversation
         messages = conversation.messages.all()
         serializer = MessageSerializer(messages, many=True)
         
@@ -95,13 +90,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
         Add a new participant to an existing conversation
         """
         conversation = self.get_object()
-        
-        # Check if current user is participant (authorization)
-        if request.user not in conversation.participants.all():
-            return Response(
-                {'error': 'You are not authorized to modify this conversation'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
         
         user_id = request.data.get('user_id')
         if not user_id:
@@ -123,6 +111,42 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 {'error': 'User not found'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
+    
+    @action(detail=True, methods=['delete'])
+    def remove_participant(self, request, conversation_id=None):
+        """
+        Remove a participant from the conversation
+        """
+        conversation = self.get_object()
+        
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response(
+                {'error': 'User ID is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user_to_remove = User.objects.get(user_id=user_id)
+            
+            # Prevent removing yourself if it would leave conversation empty
+            if user_to_remove == request.user and conversation.participants.count() == 1:
+                return Response(
+                    {'error': 'Cannot remove yourself from conversation as the only participant'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            conversation.participants.remove(user_to_remove)
+            
+            return Response(
+                {'message': f'User {user_to_remove.username} removed from conversation'}, 
+                status=status.HTTP_200_OK
+            )
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class MessageViewSet(viewsets.ModelViewSet):
@@ -132,7 +156,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     """
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     lookup_field = 'message_id'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['sent_at', 'conversation']
@@ -155,6 +179,18 @@ class MessageViewSet(viewsets.ModelViewSet):
             return MessageCreateSerializer
         return MessageSerializer
     
+    def get_permissions(self):
+        """
+        Instantiate and return the list of permissions required for this view.
+        For update/delete operations, also check if user is the message sender
+        """
+        permission_classes = [IsAuthenticated, IsParticipantOfConversation]
+        
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes.append(IsMessageSender)
+        
+        return [permission() for permission in permission_classes]
+    
     def create(self, request, *args, **kwargs):
         """
         Create a new message in a conversation
@@ -165,25 +201,22 @@ class MessageViewSet(viewsets.ModelViewSet):
         validated_data = serializer.validated_data
         
         try:
-            # Get conversation and sender from validated data
+            # Get conversation and verify user is participant
             conversation = Conversation.objects.get(
                 conversation_id=validated_data['conversation_id']
             )
-            sender = User.objects.get(
-                user_id=validated_data['sender_id']
-            )
             
-            # Verify sender is authenticated user (security check)
-            if sender != request.user:
+            # Check if user is participant (redundant but explicit)
+            if not conversation.participants.filter(user_id=request.user.user_id).exists():
                 return Response(
-                    {'error': 'You can only send messages as yourself'}, 
+                    {'error': 'You are not a participant in this conversation'}, 
                     status=status.HTTP_403_FORBIDDEN
                 )
             
-            # Create the message
+            # Create the message with current user as sender
             message = Message.objects.create(
                 conversation=conversation,
-                sender=sender,
+                sender=request.user,
                 message_body=validated_data['message_body']
             )
             
@@ -195,9 +228,9 @@ class MessageViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED
             )
             
-        except (Conversation.DoesNotExist, User.DoesNotExist) as e:
+        except Conversation.DoesNotExist:
             return Response(
-                {'error': 'Conversation or User not found'}, 
+                {'error': 'Conversation not found'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
     
@@ -223,13 +256,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         """
         message = self.get_object()
         
-        # Check if user is participant in the conversation
-        if request.user not in message.conversation.participants.all():
-            return Response(
-                {'error': 'You are not authorized to access this message'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
+        # Permission check is handled by IsParticipantOfConversation
         # Placeholder response (you could add a 'read_by' field to Message model)
         return Response(
             {'message': 'Message marked as read'}, 
@@ -239,14 +266,6 @@ class MessageViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """
         Override delete to only allow message sender to delete their own messages
+        Permissions is enforced by IsMessageSender is get_permissions()
         """
-        message = self.get_object()
-        
-        # Only sender can delete their message
-        if message.sender != request.user:
-            return Response(
-                {'error': 'You can only delete your own messages'}, 
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
         return super().destroy(request, *args, **kwargs)
