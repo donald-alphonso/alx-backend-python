@@ -14,6 +14,8 @@ from .serializers import (
     MessageCreateSerializer
 )
 from .permissions import IsParticipantOfConversation, IsMessageSender
+from .filters import MessageFilter, ConversationFilter
+from .pagination import MessagePagination, ConversationPagination
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
@@ -24,10 +26,13 @@ class ConversationViewSet(viewsets.ModelViewSet):
     queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated, IsParticipantOfConversation]
+    pagination_class = ConversationPagination
     lookup_field = 'conversation_id'
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['created_at']
-    search_fields = ['participants__username']
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = ConversationFilter
+    search_fields = ['participants__username', 'participants__first_name', 'participants__last_name']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']  # Default ordering: newest first
     
     def get_queryset(self):
         """
@@ -59,9 +64,13 @@ class ConversationViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             conversation = Conversation.objects.create()
             
-            # Add participants to the conversation
+            # Add current user as participant automatically
             participants = User.objects.filter(user_id__in=participant_ids)
             conversation.participants.set(participants)
+            
+            # Ensure current user is always a participant
+            if request.user not in conversation.participants.all():
+                conversation.participants.add(request.user)
             
             # Serialize the created conversation for response
             response_serializer = ConversationSerializer(conversation)
@@ -157,10 +166,13 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated, IsParticipantOfConversation]
+    pagination_class = MessagePagination
     lookup_field = 'message_id'
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['sent_at', 'conversation']
-    search_fields = ['message_body', 'sender__username']
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = MessageFilter
+    search_fields = ['message_body', 'sender__username', 'sender__first_name', 'sender__last_name']
+    ordering_fields = ['sent_at', 'sender__username']
+    ordering = ['-sent_at']  # Default ordering: newest first
     
     def get_queryset(self):
         """
@@ -266,6 +278,6 @@ class MessageViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """
         Override delete to only allow message sender to delete their own messages
-        Permissions is enforced by IsMessageSender is get_permissions()
+        Permission is enforced by IsMessageSender in get_permissions()
         """
         return super().destroy(request, *args, **kwargs)
