@@ -1,0 +1,49 @@
+{% extends "messaging/base_thread.html" %}
+
+{% block thread_content %}
+<div class="card">
+    <div class="card-header">
+        <h4>Reply to message</h4>
+    </div>
+    <div class="card-body">
+        <!-- Aperçu du message original -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <strong>Original message from {{ parent_message.sender.username }}</strong>
+                <small class="text-muted">
+                    {{ parent_message.timestamp|timesince }} ago
+                </small>
+            </div>
+            <div class="card-body">
+                <div class="message-content">
+                    {{ parent_message.content|linebreaksbr }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formulaire de réponse -->
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ form.content.label_tag }}
+                {{ form.content }}
+                {% if form.content.errors %}
+                    <div class="invalid-feedback">
+                        {{ form.content.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Send Reply</button>
+                <a href="{% url 'messaging:thread_detail' parent_message.id %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.message-content {
+    white-space: pre-wrap;
+}
+</style>
+{% endblock %}

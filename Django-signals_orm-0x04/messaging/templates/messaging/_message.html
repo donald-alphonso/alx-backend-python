@@ -1,0 +1,21 @@
+<div class="message mb-3">
+    <div class="message-header">
+        <strong>{{ message.sender.username }}</strong>
+        <small class="text-muted">
+            {{ message.timestamp|timesince }} ago
+            {% if message.is_edited %}(edited){% endif %}
+        </small>
+    </div>
+    <div class="message-content">
+        {{ message.content|linebreaksbr }}
+    </div>
+    
+    <!-- Réponses -->
+    {% if message.thread_replies %}
+        <div class="replies mt-3">
+            {% for reply in message.thread_replies %}
+                {% include 'messaging/_message.html' with message=reply level=level|add:1 %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
